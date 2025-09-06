@@ -18,9 +18,9 @@
 
 #![warn(missing_docs, missing_debug_implementations)]
 
-use std::cmp::{Ord, Ordering};
-use std::borrow::Borrow;
 use permutation::*;
+use std::borrow::Borrow;
+use std::cmp::{Ord, Ordering};
 
 /// The basic building blocks this crate is made of.
 pub mod foundation {
@@ -101,7 +101,7 @@ pub mod permutation {
     pub trait Permutation {
         /// An iterator through the permutation.
         /// This may be more efficient than indexing a counter.
-        type Iter: Iterator<Item=usize>;
+        type Iter: Iterator<Item = usize>;
 
         /// Get an iterator.
         fn iterable(&self) -> Self::Iter;
@@ -129,7 +129,6 @@ pub mod permutation {
         fn permute(&mut self, data: &mut [T], permutation: &P);
     }
 
-
     /// Simple permutator that does not allocate.
     ///
     /// Worst-case runtime is in `O(n^2)`, so you should only use this for small permutations.
@@ -151,14 +150,16 @@ pub mod permutation {
         }
     }
 
-
     /// Simple permutator that stack-allocates a copy of the data (using recursion).
     ///
     /// Worst-case runtime is `O(n)`, but this takes `O(n)` stack space so it WILL NOT work for large permutations.
     #[derive(Clone, Copy, Debug, Default)]
     pub struct StackCopyPermutator;
 
-    fn recursive_permute<T: Clone, P: ?Sized + Permutation>(data: &mut [T], permutation: &mut Enumerate<P::Iter>) {
+    fn recursive_permute<T: Clone, P: ?Sized + Permutation>(
+        data: &mut [T],
+        permutation: &mut Enumerate<P::Iter>,
+    ) {
         if let Some((i, p)) = permutation.next() {
             let item = data[p].clone();
             recursive_permute::<T, P>(data, permutation);
@@ -174,7 +175,6 @@ pub mod permutation {
         }
     }
 
-
     /// Simple permutator that heap-allocates a copy of the data.
     ///
     /// Worst-case runtime is `O(n)`, taking `O(n)` heap space in a reusable buffer.
@@ -189,7 +189,8 @@ pub mod permutation {
         #[inline]
         fn permute(&mut self, data: &mut [T], permutation: &P) {
             self.buffer.clear();
-            self.buffer.extend(permutation.iterable().map(|i| data[i].clone()));
+            self.buffer
+                .extend(permutation.iterable().map(|i| data[i].clone()));
             for (i, t) in self.buffer.drain(..).enumerate() {
                 data[i] = t;
             }
@@ -269,8 +270,6 @@ pub mod permutation {
     }
 }
 
-
-
 /// Generates a permutation that transforms a sorted array into an eytzinger array.
 ///
 /// This is an iterator which yields a permutation (indexes into the sorted array)
@@ -312,7 +311,9 @@ impl Iterator for PermutationGenerator {
 
         let li = self.li;
         self.li += 1;
-        Some(foundation::get_permutation_element_by_node(self.size, self.ipk, li))
+        Some(foundation::get_permutation_element_by_node(
+            self.size, self.ipk, li,
+        ))
     }
 
     #[inline]
@@ -380,7 +381,10 @@ pub trait SliceExt<T> {
     /// assert_eq!(s.eytzinger_search(&6), Some(6));
     /// assert_eq!(s.eytzinger_search(&7), None);
     /// ```
-    fn eytzinger_search<Q: ?Sized>(&self, x: &Q) -> Option<usize> where Q: Ord, T: Borrow<Q>;
+    fn eytzinger_search<Q: ?Sized>(&self, x: &Q) -> Option<usize>
+    where
+        Q: Ord,
+        T: Borrow<Q>;
 
     /// Binary searches this eytzinger slice with a comparator function.
     ///
@@ -400,7 +404,10 @@ pub trait SliceExt<T> {
     /// assert_eq!(s.eytzinger_search_by(|x| x.cmp(&6)), Some(6));
     /// assert_eq!(s.eytzinger_search_by(|x| x.cmp(&7)), None);
     /// ```
-    fn eytzinger_search_by<'a, F>(&'a self, f: F) -> Option<usize> where F: FnMut(&'a T) -> Ordering, T: 'a;
+    fn eytzinger_search_by<'a, F>(&'a self, f: F) -> Option<usize>
+    where
+        F: FnMut(&'a T) -> Ordering,
+        T: 'a;
 
     /// Binary searches this sorted slice with a key extraction function.
     ///
@@ -421,10 +428,11 @@ pub trait SliceExt<T> {
     /// assert_eq!(s.eytzinger_search_by_key(&'x', |&(_, b)| b), None);
     /// ```
     fn eytzinger_search_by_key<'a, B, F, Q: ?Sized>(&'a self, b: &Q, f: F) -> Option<usize>
-        where B: Borrow<Q>,
-              F: FnMut(&'a T) -> B,
-              Q: Ord,
-              T: 'a;
+    where
+        B: Borrow<Q>,
+        F: FnMut(&'a T) -> B,
+        Q: Ord,
+        T: 'a;
 }
 
 /// Binary searches this eytzinger slice with a comparator function.
@@ -448,14 +456,18 @@ pub trait SliceExt<T> {
 /// ```
 #[inline]
 pub fn eytzinger_search_by<'a, T: 'a, F>(data: &'a [T], f: F) -> Option<usize>
-    where F: FnMut(&'a T) -> Ordering {
+where
+    F: FnMut(&'a T) -> Ordering,
+{
     eytzinger_search_by_impl(data, f)
 }
 
 #[inline]
 #[cfg(not(feature = "branchless"))]
 fn eytzinger_search_by_impl<'a, T: 'a, F>(data: &'a [T], mut f: F) -> Option<usize>
-    where F: FnMut(&'a T) -> Ordering {
+where
+    F: FnMut(&'a T) -> Ordering,
+{
     let mut i = 0;
     loop {
         match data.get(i) {
@@ -480,7 +492,9 @@ fn eytzinger_search_by_impl<'a, T: 'a, F>(data: &'a [T], mut f: F) -> Option<usi
 #[inline]
 #[cfg(feature = "branchless")]
 fn eytzinger_search_by_impl<'a, T: 'a, F>(data: &'a [T], mut f: F) -> Option<usize>
-    where F: FnMut(&'a T) -> Ordering {
+where
+    F: FnMut(&'a T) -> Ordering,
+{
     let mut i = 0;
     while i < data.len() {
         let v = &data[i]; // this range check is optimized out :D
@@ -508,37 +522,49 @@ impl<T> SliceExt<T> for [T] {
     }
 
     #[inline]
-    fn eytzinger_search<Q: ?Sized>(&self, x: &Q) -> Option<usize> where Q: Ord, T: Borrow<Q> {
+    fn eytzinger_search<Q: ?Sized>(&self, x: &Q) -> Option<usize>
+    where
+        Q: Ord,
+        T: Borrow<Q>,
+    {
         self.eytzinger_search_by(|e| e.borrow().cmp(x))
     }
 
     #[inline]
-    fn eytzinger_search_by<'a, F>(&'a self, f: F) -> Option<usize> where F: FnMut(&'a T) -> Ordering, T: 'a {
+    fn eytzinger_search_by<'a, F>(&'a self, f: F) -> Option<usize>
+    where
+        F: FnMut(&'a T) -> Ordering,
+        T: 'a,
+    {
         eytzinger_search_by(self, f)
     }
 
     #[inline]
     fn eytzinger_search_by_key<'a, B, F, Q: ?Sized>(&'a self, b: &Q, mut f: F) -> Option<usize>
-        where B: Borrow<Q>,
-              F: FnMut(&'a T) -> B,
-              Q: Ord,
-              T: 'a {
+    where
+        B: Borrow<Q>,
+        F: FnMut(&'a T) -> B,
+        Q: Ord,
+        T: 'a,
+    {
         self.eytzinger_search_by(|k| f(k).borrow().cmp(b))
     }
 }
-
 
 #[cfg(test)]
 #[macro_use]
 extern crate quickcheck;
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::foundation::*;
+    use super::*;
 
     #[test]
     fn magic() {
-        for (i, &v) in [0, 1, 1, 2, 3, 3, 3, 4, 5, 6, 7, 7, 7, 7, 7, 8].iter().enumerate() {
+        for (i, &v) in [0, 1, 1, 2, 3, 3, 3, 4, 5, 6, 7, 7, 7, 7, 7, 8]
+            .iter()
+            .enumerate()
+        {
             assert_eq!(get_permutation_element_by_node(i + 1, 1, 0), v);
         }
         for (i, &v) in [0, 0, 1, 1, 1, 1, 2, 3, 3].iter().enumerate() {
@@ -653,7 +679,10 @@ mod tests {
         }
     }
 
-    fn test_permutation<P: Default>(junk: Vec<usize>) -> bool where for<'a> P: Permutator<usize, &'a [usize]> {
+    fn test_permutation<P: Default>(junk: Vec<usize>) -> bool
+    where
+        for<'a> P: Permutator<usize, &'a [usize]>,
+    {
         // first create a permutation from the random array
         let mut perm: Vec<_> = (0..junk.len()).collect();
         perm.sort_by_key(|&i| junk[i]);
