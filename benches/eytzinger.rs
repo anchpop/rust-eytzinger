@@ -9,8 +9,8 @@
 // except according to those terms.
 #![feature(test)]
 
-extern crate test;
 extern crate eytzinger;
+extern crate test;
 
 use eytzinger::SliceExt;
 use test::black_box;
@@ -23,11 +23,12 @@ enum Cache {
 }
 
 fn eytzinger_search<F>(b: &mut Bencher, cache: Cache, mapper: F)
-    where F: Fn(usize) -> usize
+where
+    F: Fn(usize) -> usize,
 {
     let size = match cache {
-        Cache::L1 => 1000, // 8kb
-        Cache::L2 => 10_000, // 80kb
+        Cache::L1 => 1000,      // 8kb
+        Cache::L2 => 10_000,    // 80kb
         Cache::L3 => 1_000_000, // 8Mb
     };
     let mut v = (0..size).map(&mapper).collect::<Vec<_>>();
